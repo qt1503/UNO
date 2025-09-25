@@ -155,19 +155,6 @@ CURRENT_PLAYER:tên;TOP_CARD:màu-giá_trị;HAND:bài1,bài2,...;OTHER_HANDS:pl
 - **Debug Logging**: Comprehensive logging throughout the system
 - **UNO Status Tracking**: Real-time tracking của trạng thái UNO
 
-## Version History
-
-### v2.1 (Latest) - Enhanced UNO Features
-- ✅ Catch UNO system với 3-second timer
-- ✅ Automatic penalty system (2 cards)  
-- ✅ Enhanced debug logging
-- ✅ Improved error handling
-
-### v2.0 - Multiplayer Support  
-- ✅ Client-server architecture
-- ✅ Multi-platform support
-- ✅ Real-time game updates
-- ✅ Socket communication
 
 ## 🔧 Development & Debugging
 
