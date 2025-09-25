@@ -51,16 +51,6 @@ public class UNOServer {
         try {
             while (clients.size() < expectedPlayers) {
                 Socket clientSocket = serverSocket.accept();
-                
-                // Kiểm tra IP của client - chỉ cho phép localhost và LAN
-                String clientIP = clientSocket.getInetAddress().getHostAddress();
-                if (!isValidLocalConnection(clientIP)) {
-                    System.out.println("REJECTED: Connection from " + clientIP + " (not localhost/LAN)");
-                    clientSocket.close();
-                    continue;
-                }
-                
-                System.out.println("ACCEPTED: Connection from " + clientIP + " (localhost/LAN)");
                 ClientHandler clientHandler = new ClientHandler(clientSocket, this);
                 clients.add(clientHandler);
                 new Thread(clientHandler).start();
