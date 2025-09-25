@@ -10,6 +10,7 @@ package uno;
  */
 public class Main {
     public static void main(String[] args) {
-        new Menu().setVisible(true);
+        // Launch the new multiplayer launcher
+        new UNOLauncher().setVisible(true);
     }
 }

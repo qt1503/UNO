@@ -36,6 +36,9 @@ public class Game {
     
     boolean gameDirection;
     
+    // Map theo dõi trạng thái UNO của từng người chơi
+    private java.util.Map<String, Boolean> playerUnoStatus;
+    
     public Game(String [] pids){
         deck=new UnoDeck();
         deck.shuffle();
@@ -46,10 +49,12 @@ public class Game {
         gameDirection = false;
         
         playerHand = new ArrayList<ArrayList<UnoCard>>();
+        playerUnoStatus = new java.util.HashMap<>();
         
         for(int i = 0; i < pids.length; i++){
             ArrayList<UnoCard> hand = new ArrayList<UnoCard>(Arrays.asList(deck.drawCard(6)));
             playerHand.add(hand);
+            playerUnoStatus.put(pids[i], false); // Khởi tạo trạng thái UNO
         }
     }
 
@@ -59,10 +64,16 @@ public class Game {
         validColor = card.getColor();
         validValue = card.getValue();
         
-        if(card.getValue()==UnoCard.Value.Wild){
-            start(game);
+        // Nếu lá đầu tiên là Wild, đặt màu là Wild để cho phép người chơi đầu tiên chơi bất kỳ lá nào
+        if(card.getValue()==UnoCard.Value.Wild || card.getValue()==UnoCard.Value.Wild_Four){
+            validColor = UnoCard.Color.Wild;
+            validValue = card.getValue();
+            stockPile.add(card);
+            System.out.println("WILD CARD START: Top card is Wild, players can play any card!");
+            return; // Không cần rút lá khác, người chơi đầu tiên có thể chọn bất kỳ lá nào
         }
-        if(card.getValue() == UnoCard.Value.Wild_Four || card.getValue()== UnoCard.Value.DrawTwo){
+        // Xử lý các lá bài đặc biệt (trừ Wild đã xử lý ở trên)
+        if(card.getValue() == UnoCard.Value.DrawTwo){
             JLabel message = new JLabel(playerId[curPlayer]+" được qua lượt");
             message.setFont(new Font("Times New Roman", Font.BOLD, 20));
             JOptionPane.showMessageDialog(null,message);
@@ -84,12 +95,22 @@ public class Game {
             gameDirection ^=true;
             curPlayer = playerId.length - 1;
         }
-        stockPile.add(card);
+        
+        // Chỉ thêm vào stockPile nếu chưa được thêm (Wild cards đã được thêm ở trên)
+        if(card.getValue() != UnoCard.Value.Wild && card.getValue() != UnoCard.Value.Wild_Four) {
+            stockPile.add(card);
+        }
     }
     
     public UnoCard getTopCard(){
         return new UnoCard(validColor, validValue);
     }
+    
+    public String getTopCardDisplay() {
+        // Trả về string hiển thị cho top card với màu hiệu lực
+        return validColor + "-" + validValue;
+    }
+    
     public ImageIcon getTopCardImage(){
 
         return new ImageIcon(validColor+"-"+ validValue+".png");
@@ -134,10 +155,15 @@ public class Game {
        return getPlayerHand(pid).isEmpty();
     }
     public boolean validCardPLay(UnoCard card){
+        // Nếu top card hiện tại có màu Wild, cho phép chơi bất kỳ lá bài nào
+        if (validColor == UnoCard.Color.Wild) {
+            return true;
+        }
+        // Kiểm tra bình thường: cùng màu hoặc cùng giá trị
         return card.getColor()==validColor||card.getValue()==validValue;
     }
     public void checkPlayerTurn(String pid) throws InvalidPlayerTurnException{
-        if(this.playerId[this.curPlayer]!=pid){
+        if(!this.playerId[this.curPlayer].equals(pid)){
             throw new InvalidPlayerTurnException("Không phải lượt của "+pid,pid);
         }
     }
@@ -149,6 +175,10 @@ public class Game {
             deck.shuffle();
         }
         getPlayerHand(pid).add(deck.drawCard());
+        
+        // Reset trạng thái UNO khi rút bài (có thêm bài rồi)
+        playerUnoStatus.put(pid, false);
+        
         if(gameDirection == false){
             curPlayer = (curPlayer + 1) % playerId.length;
         }
@@ -189,6 +219,11 @@ public class Game {
                 }
             }
             pHand.remove(card);
+            
+            // Reset trạng thái UNO khi chơi bài (trừ khi còn đúng 1 lá)
+            if (pHand.size() != 1) {
+                playerUnoStatus.put(pid, false);
+            }
             
             if(hasEmptyHand(this.playerId[curPlayer])){
                 JLabel message2 = new JLabel(this.playerId[curPlayer]+ " đã chiến thắng!");
@@ -308,5 +343,63 @@ public class Game {
         }
         
         
+    }
+    
+    public String getWinner() {
+        for(String player : this.playerId) {
+            if(hasEmptyHand(player)) {
+                return player;
+            }
+        }
+        return null;
+    }
+    
+    // Methods for UNO catching feature
+    public void setPlayerUnoStatus(String playerName, boolean hasCalledUno) {
+        playerUnoStatus.put(playerName, hasCalledUno);
+    }
+    
+    public String findPlayerWithoutUno() {
+        for (String player : playerId) {
+            int handSize = getPlayerHandSize(player);
+            Boolean hasCalledUno = playerUnoStatus.get(player);
+            
+            System.out.println("DEBUG findPlayerWithoutUno:");
+            System.out.println("  Player: " + player);
+            System.out.println("  Hand size: " + handSize);
+            System.out.println("  Has called UNO: " + hasCalledUno);
+            
+            // Nếu người chơi có 1 lá bài và chưa gọi UNO (hoặc null = chưa gọi)
+            if (handSize == 1 && (hasCalledUno == null || !hasCalledUno)) {
+                System.out.println("  -> Found player without UNO: " + player);
+                return player;
+            }
+        }
+        System.out.println("  -> No player found without UNO");
+        return null;
+    }
+    
+    public void penalizePlayer(String playerName, int cardsToDraw) {
+        ArrayList<UnoCard> hand = getPlayerHand(playerName);
+        int handSizeBefore = hand.size();
+        
+        System.out.println("PENALTY: " + playerName + " bị phạt " + cardsToDraw + " lá bài");
+        System.out.println("  Số lá trước khi phạt: " + handSizeBefore);
+        
+        for (int i = 0; i < cardsToDraw; i++) {
+            UnoCard card = deck.drawCard();
+            if (card != null) {
+                hand.add(card);
+                System.out.println("  Rút lá: " + card);
+            }
+        }
+        
+        int handSizeAfter = hand.size();
+        System.out.println("  Số lá sau khi phạt: " + handSizeAfter);
+        System.out.println("  Đã phạt thành công: " + (handSizeAfter - handSizeBefore) + " lá bài");
+        
+        // Reset trạng thái UNO sau khi phạt
+        playerUnoStatus.put(playerName, false);
+        System.out.println("  Reset UNO status cho " + playerName);
     }
 }
